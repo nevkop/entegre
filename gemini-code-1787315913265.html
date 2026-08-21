@@ -1,0 +1,1236 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Yönetici Görev Dağıtım ve Tebliğ Portalı</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- SortableJS -->
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+  <!-- Phosphor Icons -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&display=swap');
+    body { font-family: 'Inter', sans-serif; }
+    .serif-font { font-family: 'Newsreader', serif; }
+
+    .ghost-card {
+      opacity: 0.35;
+      background: #e0f2fe;
+      border: 2px dashed #0284c7 !important;
+      transform: scale(0.98);
+    }
+    .chosen-card {
+      transform: scale(1.02);
+      box-shadow: 0 14px 28px rgba(0, 0, 0, 0.08);
+    }
+    .custom-scroll::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+
+    @media print {
+      body * { visibility: hidden; }
+      #print-area, #print-area * { visibility: visible; }
+      #print-area {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+        background: white !important;
+        border: none !important;
+        box-shadow: none !important;
+      }
+      .no-print { display: none !important; }
+    }
+  </style>
+</head>
+<body class="bg-slate-100/90 text-slate-800 antialiased min-h-screen flex flex-col select-none">
+
+  <!-- Üst Bar -->
+  <header class="bg-white border-b border-slate-200 px-6 py-3 flex flex-wrap items-center justify-between gap-4 shrink-0 shadow-sm">
+    <div class="flex items-center space-x-3.5">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-600 to-indigo-600 flex items-center justify-center shadow-md text-white">
+        <i class="ph-bold ph-kanban text-xl"></i>
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 id="header-school-name" class="text-base font-extrabold tracking-tight text-slate-900">Kurum Görev Dağıtım Portalı</h1>
+          <span id="header-term" class="bg-sky-50 text-sky-700 border border-sky-200 text-[11px] px-2 py-0.5 rounded-full font-semibold">2026-2027</span>
+        </div>
+        <p class="text-xs text-slate-500">MEB Yönetici Görev Tebliğ ve İş Bölümü Sistemi</p>
+      </div>
+    </div>
+
+    <!-- Sağ: Butonlar & İmzalar -->
+    <div class="flex items-center gap-2 flex-wrap">
+      
+      <!-- Kullanım Kılavuzu Butonu -->
+      <button onclick="openModal('guide-modal')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold px-3 py-2 rounded-xl text-xs flex items-center gap-1.5 transition shadow-sm">
+        <i class="ph-bold ph-question text-base text-indigo-600"></i> Nasıl Kullanılır?
+      </button>
+
+      <!-- Portal Yöneticisi Rozeti -->
+      <div class="hidden 2xl:flex items-center gap-2.5 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200">
+        <i class="ph-fill ph-user-circle text-sky-600 text-2xl"></i>
+        <div class="text-left leading-tight">
+          <p class="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Portal Yöneticisi</p>
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-bold text-slate-800">Nevzat KOPARAN <span class="text-sky-600 font-normal text-[11px]">(Mdr. Yrd.)</span></span>
+            <a href="mailto:nevzatkoparan@hotmail.com" class="text-[11px] text-slate-500 hover:text-sky-600 flex items-center gap-0.5 border-l border-slate-300 pl-2">
+              <i class="ph-bold ph-envelope-simple"></i> nevzatkoparan@hotmail.com
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <div class="h-6 w-px bg-slate-200 hidden 2xl:block"></div>
+
+      <!-- Yedekleme & Yükleme -->
+      <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2 py-1 rounded-xl">
+        <button onclick="exportDataBackup()" title="Verileri JSON Olarak İndir" class="bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-300 font-semibold px-2.5 py-1.5 rounded-lg text-xs flex items-center gap-1 transition shadow-sm">
+          <i class="ph-bold ph-download-simple text-sm"></i> Yedek İndir
+        </button>
+
+        <label title="JSON Yedeğini Yükle" class="bg-white hover:bg-indigo-50 text-indigo-700 border border-indigo-300 font-semibold px-2.5 py-1.5 rounded-lg text-xs flex items-center gap-1 cursor-pointer transition shadow-sm">
+          <i class="ph-bold ph-upload-simple text-sm"></i> Yedek Yükle
+          <input type="file" id="import-file-input" accept=".json" onchange="importDataBackup(event)" class="hidden">
+        </label>
+      </div>
+
+      <!-- Dağıtılan Görevleri Sıfırla Butonu -->
+      <button onclick="clearAllAssignments()" title="Tüm müdür yardımcılarına atanmış görevleri kaldırıp havuza geri toplar" class="bg-amber-500 hover:bg-amber-600 text-white font-semibold px-3 py-2 rounded-xl text-xs flex items-center gap-1.5 transition shadow-sm">
+        <i class="ph-bold ph-arrow-u-down-left text-base"></i> Dağılımı Sıfırla
+      </button>
+
+      <!-- Kurum Ayarları Butonu -->
+      <button onclick="openSchoolSettingsModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 font-semibold px-3 py-2 rounded-xl text-xs flex items-center gap-1.5 transition shadow-sm">
+        <i class="ph-bold ph-buildings text-base text-slate-600"></i> Kurum Bilgileri
+      </button>
+
+      <!-- Görev Ekle Butonu -->
+      <button onclick="openTaskModal()" class="bg-sky-600 hover:bg-sky-700 text-white font-semibold px-3 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition">
+        <i class="ph-bold ph-plus-circle text-base"></i> Yeni Görev
+      </button>
+
+      <!-- Müdür Yrd Ekle Butonu -->
+      <button onclick="openAssistantModal()" class="bg-slate-900 hover:bg-slate-800 text-white font-semibold px-3 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition">
+        <i class="ph-bold ph-user-plus text-base"></i> Müdür Yrd. Ekle
+      </button>
+
+      <!-- Varsayılana Sıfırla Butonu -->
+      <button onclick="resetToFactoryDefaults()" title="Varsayılan Şablona Sıfırla" class="bg-white hover:bg-rose-50 text-slate-400 hover:text-rose-600 p-2 rounded-xl border border-slate-200 transition">
+        <i class="ph-bold ph-arrows-counter-clockwise text-base"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- Ana Çalışma Alanı -->
+  <main class="flex-1 p-6 overflow-hidden flex flex-col">
+    <div class="flex items-start gap-6 h-[calc(100vh-105px)]">
+      
+      <!-- SOL: GÖREV HAVUZU -->
+      <section class="w-[430px] bg-white rounded-2xl border border-slate-200 flex flex-col shrink-0 h-full overflow-hidden shadow-sm">
+        <div class="p-4 border-b border-slate-100 bg-slate-50/70 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <i class="ph-fill ph-stack text-sky-600 text-lg"></i>
+            <div>
+              <h2 class="font-bold text-slate-900 text-sm">Görev Havuzu</h2>
+              <p class="text-[11px] text-slate-500">Müdür yardımcılarına sürükleyip bırakın</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span id="pool-count" class="bg-amber-100 text-amber-800 text-[11px] font-bold px-2 py-0.5 rounded-md">0 Boşta</span>
+            <span id="total-count" class="bg-slate-200 text-slate-700 text-[11px] font-semibold px-2 py-0.5 rounded-md">0 Toplam</span>
+          </div>
+        </div>
+
+        <!-- Arama ve Filtreleme -->
+        <div class="p-3 border-b border-slate-100 bg-white flex gap-2">
+          <div class="relative flex-1">
+            <i class="ph ph-magnifying-glass absolute left-2.5 top-2.5 text-slate-400 text-xs"></i>
+            <input type="text" id="task-search" placeholder="Görev veya alt madde ara..." oninput="filterTasks()" class="w-full bg-slate-50 border border-slate-200 rounded-lg pl-8 pr-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-sky-500">
+          </div>
+          <select id="type-filter" onchange="filterTasks()" class="bg-slate-50 border border-slate-200 text-slate-700 text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-sky-500">
+            <option value="all">Tüm Liste</option>
+            <option value="single">Tekil Görevler</option>
+            <option value="package">Paket Görevler</option>
+            <option value="unassigned">Sadece Boştakiler</option>
+          </select>
+        </div>
+
+        <!-- Görev Listesi -->
+        <div id="pool-list" data-column-id="pool" class="task-dropzone p-3.5 overflow-y-auto flex-1 space-y-3 custom-scroll bg-slate-50/40"></div>
+      </section>
+
+      <!-- SAĞ: MÜDÜR YARDIMCILARI KOLONLARI -->
+      <section class="flex-1 min-w-0 h-full flex flex-col overflow-hidden">
+        <div class="flex items-center justify-between mb-3 shrink-0">
+          <div>
+            <h2 class="text-base font-bold text-slate-900">Yönetici Kadrosu & Sorumluluk Çizelgesi</h2>
+            <p class="text-xs text-slate-500">Kartları panolar arasında serbestçe taşıyabilirsiniz</p>
+          </div>
+          <span class="text-xs text-slate-400 font-medium">Panolar sağa doğru kaydırılabilir</span>
+        </div>
+
+        <div id="assistants-container" class="flex gap-5 items-start overflow-x-auto flex-1 pb-4 custom-scroll"></div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- MODAL: KULLANIM KILAVUZU / REHBER -->
+  <div id="guide-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-4 text-slate-800 max-h-[90vh] flex flex-col">
+      <div class="flex justify-between items-center border-b border-slate-100 pb-3 shrink-0">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center">
+            <i class="ph-bold ph-book-open-text text-lg"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-base text-slate-900">Portal Kullanım Kılavuzu</h3>
+            <p class="text-xs text-slate-500">Görev dağıtım ve yönetim adımları</p>
+          </div>
+        </div>
+        <button onclick="closeModal('guide-modal')" class="text-slate-400 hover:text-slate-700"><i class="ph-bold ph-x text-xl"></i></button>
+      </div>
+
+      <div class="overflow-y-auto space-y-4 text-xs leading-relaxed text-slate-600 custom-scroll pr-2">
+        <div class="bg-sky-50 border border-sky-100 p-3.5 rounded-xl space-y-1">
+          <p class="font-bold text-sky-900 flex items-center gap-1.5"><i class="ph-bold ph-hand-grabbing text-sky-600"></i> 1. Görev Dağıtımı ve Sürükle-Bırak</p>
+          <p>Sol taraftaki <strong>Görev Havuzu</strong>'nda yer alan kartları tutarak dilediğiniz müdür yardımcısının sütununa sürükleyip bırakabilirsiniz. Aynı görevi birden fazla yöneticiye ortak olarak verebilirsiniz.</p>
+        </div>
+
+        <div class="bg-amber-50 border border-amber-100 p-3.5 rounded-xl space-y-1">
+          <p class="font-bold text-amber-900 flex items-center gap-1.5"><i class="ph-bold ph-scissors text-amber-600"></i> 2. Paket Görevlerden Alt Madde Ayırma</p>
+          <p>Büyük görev paketlerinin altındaki maddelerin sağ tarafında bulunan <strong>makas (ayır)</strong> ikonuna tıkladığınızda, o madde paketten koparak havuzda bağımsız bir <strong>"Tekil Görev"</strong> kartına dönüşür.</p>
+        </div>
+
+        <div class="bg-emerald-50 border border-emerald-100 p-3.5 rounded-xl space-y-1">
+          <p class="font-bold text-emerald-900 flex items-center gap-1.5"><i class="ph-bold ph-floppy-disk-back text-emerald-600"></i> 3. Yedek Alma ve Notion / GitHub Aktarımı</p>
+          <p>Tarayıcı önbelleği temizlendiğinde verilerin kaybolmaması veya başka bir bilgisayarda çalışmak için üst bardaki <strong>"Yedek İndir"</strong> butonuyla `.json` yedeğinizi alın. Başka bir cihazda <strong>"Yedek Yükle"</strong> diyerek bu dosyayı seçtiğinizde tüm dağılım birebir geri yüklenir.</p>
+        </div>
+
+        <div class="bg-slate-50 border border-slate-200 p-3.5 rounded-xl space-y-1">
+          <p class="font-bold text-slate-900 flex items-center gap-1.5"><i class="ph-bold ph-printer text-slate-700"></i> 4. Resmi Görev Tebliği Yazdırma</p>
+          <p>Her müdür yardımcısı sütununun sağ üstündeki <strong>yazıcı butonuna</strong> tıklayarak MEB EBYS standartlarında hazırlanmış resmi tebliğ yazısını önizleyebilir, metni kopyalayabilir veya doğrudan A4 olarak yazdırabilirsiniz.</p>
+        </div>
+      </div>
+
+      <div class="flex justify-end pt-2 border-t border-slate-100 shrink-0">
+        <button onclick="closeModal('guide-modal')" class="px-5 py-2 text-xs bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl shadow">Anladım</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: KURUM BİLGİLERİ -->
+  <div id="school-settings-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 text-slate-800">
+      <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+        <div class="flex items-center gap-2">
+          <i class="ph-bold ph-buildings text-xl text-sky-600"></i>
+          <div>
+            <h3 class="font-bold text-base text-slate-900">Kurum & Üst Yazı Bilgileri</h3>
+            <p class="text-xs text-slate-500">Resmi tebliğ belgesinde görünecek alanlar</p>
+          </div>
+        </div>
+        <button onclick="closeModal('school-settings-modal')" class="text-slate-400 hover:text-slate-700"><i class="ph-bold ph-x text-xl"></i></button>
+      </div>
+
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Okul / Kurum Adı</label>
+          <input type="text" id="setting-school-name" class="w-full border border-slate-300 rounded-xl p-2.5 text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-sky-500">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">İlçe / Kaymakamlık Başlığı</label>
+          <input type="text" id="setting-subdistrict" class="w-full border border-slate-300 rounded-xl p-2.5 text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-sky-500">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Eğitim-Öğretim Yılı / Dönem</label>
+          <input type="text" id="setting-term" class="w-full border border-slate-300 rounded-xl p-2.5 text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-sky-500">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Okul Müdürü Adı Soyadı</label>
+          <input type="text" id="setting-principal" class="w-full border border-slate-300 rounded-xl p-2.5 text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-sky-500">
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
+        <button onclick="closeModal('school-settings-modal')" class="px-4 py-2 text-xs text-slate-600 font-semibold hover:bg-slate-100 rounded-xl">İptal</button>
+        <button onclick="saveSchoolSettings()" class="px-4 py-2 text-xs bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl shadow-sm">Kaydet ve Güncelle</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: MÜDÜR YARDIMCISI EKLE / DÜZENLE -->
+  <div id="assistant-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl space-y-4 text-slate-800">
+      <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+        <div>
+          <h3 id="assistant-modal-title" class="font-bold text-base text-slate-900">Müdür Yardımcısı Ekle</h3>
+          <p class="text-xs text-slate-500">Yönetici adı ve unvanını düzenleyin</p>
+        </div>
+        <button onclick="closeModal('assistant-modal')" class="text-slate-400 hover:text-slate-700"><i class="ph-bold ph-x text-xl"></i></button>
+      </div>
+      <input type="hidden" id="edit-assistant-id" value="">
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Ad Soyad / Yönetici Adı</label>
+          <input type="text" id="new-ast-name" placeholder="Örn: Müdür Yardımcısı 1" class="w-full border border-slate-300 rounded-xl p-2.5 text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-sky-500">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Sorumluluk Alanı / Rol</label>
+          <input type="text" id="new-ast-role" value="Müdür Yardımcısı" placeholder="Örn: Pansiyon / MESEM" class="w-full border border-slate-300 rounded-xl p-2.5 text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-sky-500">
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
+        <button onclick="closeModal('assistant-modal')" class="px-4 py-2 text-xs text-slate-600 font-semibold hover:bg-slate-100 rounded-xl">İptal</button>
+        <button onclick="handleSaveAssistant()" class="px-4 py-2 text-xs bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl shadow">Kaydet</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: GÖREV EKLE / DÜZENLE -->
+  <div id="task-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 text-slate-800">
+      <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+        <div>
+          <h3 id="modal-task-heading" class="font-bold text-base text-slate-900">Yeni Görev / Paket Tanımla</h3>
+          <p class="text-xs text-slate-500">Görev başlığı ve alt maddeleri belirleyin</p>
+        </div>
+        <button onclick="closeModal('task-modal')" class="text-slate-400 hover:text-slate-700"><i class="ph-bold ph-x text-xl"></i></button>
+      </div>
+
+      <input type="hidden" id="edit-task-id" value="">
+
+      <div class="space-y-3.5">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Görev Yapısı</label>
+          <div class="grid grid-cols-2 gap-3">
+            <label class="flex items-center gap-2 p-2.5 rounded-xl border border-slate-200 bg-slate-50 cursor-pointer hover:border-slate-300">
+              <input type="radio" name="task-type-radio" value="package" checked onchange="toggleSubTypeInput()" class="text-sky-600 focus:ring-0">
+              <div>
+                <p class="text-xs font-bold text-slate-800">Paket Görev</p>
+                <p class="text-[10px] text-slate-500">Alt maddeleri olan görev grubu</p>
+              </div>
+            </label>
+            <label class="flex items-center gap-2 p-2.5 rounded-xl border border-slate-200 bg-slate-50 cursor-pointer hover:border-slate-300">
+              <input type="radio" name="task-type-radio" value="single" onchange="toggleSubTypeInput()" class="text-sky-600 focus:ring-0">
+              <div>
+                <p class="text-xs font-bold text-slate-800">Tekil Görev</p>
+                <p class="text-[10px] text-slate-500">Bağımsız tek görev</p>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-3 gap-3">
+          <div class="col-span-2">
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Görev Başlığı</label>
+            <input type="text" id="task-title-input" placeholder="Örn: Kantin Denetim İşlemleri" class="w-full border border-slate-300 rounded-xl p-2.5 text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-sky-500">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Kategori</label>
+            <input type="text" id="task-category-input" placeholder="Örn: MESEM / Özlük" class="w-full border border-slate-300 rounded-xl p-2.5 text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-sky-500">
+          </div>
+        </div>
+
+        <div id="subtasks-input-group">
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Alt Görev Maddeleri (Her satıra bir madde)</label>
+          <textarea id="task-subs-input" rows="6" placeholder="1. Madde&#10;2. Madde&#10;3. Madde" class="w-full border border-slate-300 rounded-xl p-2.5 text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-sky-500"></textarea>
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
+        <button onclick="closeModal('task-modal')" class="px-4 py-2 text-xs text-slate-600 font-semibold hover:bg-slate-100 rounded-xl">İptal</button>
+        <button onclick="saveTaskModalHandler()" class="px-4 py-2 text-xs bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl shadow-sm">Kaydet</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: RESMİ TEBLİĞ BELGESİ -->
+  <div id="letter-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-2xl max-w-4xl w-full p-6 sm:p-8 shadow-2xl space-y-4 max-h-[95vh] flex flex-col text-slate-900">
+      <div class="flex justify-between items-center border-b border-slate-200 pb-3 no-print">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-lg bg-sky-50 text-sky-700 flex items-center justify-center border border-sky-200">
+            <i class="ph-bold ph-printer text-xl"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-base text-slate-900">Resmi Görev Tebliğ Belgesi</h3>
+            <p class="text-xs text-slate-500">MEB EBYS Resmi Yazışma Formatında Dinamik Belge</p>
+          </div>
+        </div>
+        <button onclick="closeModal('letter-modal')" class="text-slate-400 hover:text-slate-700"><i class="ph-bold ph-x text-2xl"></i></button>
+      </div>
+      
+      <div id="print-area" class="border border-slate-300 bg-white p-10 rounded-xl text-slate-900 serif-font leading-relaxed text-sm overflow-y-auto flex-1 shadow-inner custom-scroll">
+        <div id="letter-content"></div>
+      </div>
+
+      <div class="flex justify-between items-center pt-2 no-print border-t border-slate-100">
+        <button onclick="copyLetterText()" class="text-xs flex items-center gap-2 text-slate-700 hover:text-slate-950 bg-slate-100 hover:bg-slate-200 px-4 py-2 rounded-xl font-sans font-semibold transition">
+          <i class="ph-bold ph-copy text-base"></i> Metni Kopyala
+        </button>
+        <div class="flex gap-2 font-sans">
+          <button onclick="closeModal('letter-modal')" class="px-4 py-2 text-xs text-slate-600 font-semibold hover:bg-slate-100 rounded-xl">Kapat</button>
+          <button onclick="window.print()" class="px-5 py-2 text-xs bg-slate-900 text-white font-bold hover:bg-slate-800 rounded-xl flex items-center gap-2 shadow transition">
+            <i class="ph-bold ph-printer text-base"></i> Yazdır / PDF İndir
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Word Belgesindeki Görevlerin Birebir, Eksiksiz ve Tekrarsız Listesi
+    const initialWordData = {
+      schoolName: "ŞAKİRPAŞA MESLEKİ VE TEKNİK ANADOLU LİSESİ",
+      subDistrict: "SEYHAN KAYMAKAMLIĞI",
+      term: "2026-2027 Eğitim-Öğretim Yılı",
+      principalName: "Şehmus YAMAN",
+      assistants: [
+        { 
+          id: "ast-1", 
+          name: "Müdür Yardımcısı 1", 
+          role: "Personel & Özlük & İdari", 
+          assignedTasks: ["task-personel-idari", "task-kantin-denetim"] 
+        },
+        { 
+          id: "ast-2", 
+          name: "Müdür Yardımcısı 2", 
+          role: "Öğrenci İşleri & e-Okul", 
+          assignedTasks: ["task-eokul-ogrenci-isleri", "task-disiplin-kurulu", "task-proje-cedes", "task-proje-dilimiz"] 
+        },
+        { 
+          id: "ast-3", 
+          name: "Müdür Yardımcısı 3", 
+          role: "MESEM Programı & SGK", 
+          assignedTasks: ["task-mesem-programi", "task-ogrenci-sgk"] 
+        },
+        { 
+          id: "ast-4", 
+          name: "Teknik Müdür Yardımcısı 4", 
+          role: "Teknik & Taşınır & MYS", 
+          assignedTasks: ["task-tasinir-mys-teknik"] 
+        }
+      ],
+      tasks: [
+        // 1. MESEM PROGRAMI GÖREVLERİ
+        {
+          id: "task-mesem-programi",
+          type: "package",
+          category: "MESEM Programı",
+          title: "MESEM Programı ile İlgili Tüm İş ve İşlemleri Yürütmek",
+          subTasks: [
+            "Aday Kayıt ve Kesin Kayıt İşlemleri: MESEM programına kayıt olmak isteyen öğrencilerin başvuru evraklarını incelemek, şartları taşıyanların e-MESEM ve e-Okul sistemleri üzerinden aday kayıt ve kesin kayıt işlemlerini mevzuata uygun olarak gerçekleştirmek",
+            "Sözleşme Süreçlerinin Yönetimi: Öğrenci, veli ve işletme arasında imzalanan 3308 sayılı Kanun kapsamındaki 'Sözleşme'lerin eksiksiz doldurulmasını, imzalanmasını ve arşivlenmesini sağlamak; sözleşmesi feshedilen veya değişen öğrencilerin sistem güncellemelerini yapmak",
+            "Alana Geçiş, Dal Seçimi ve Nakil İşlemleri: Öğrencilerin 9. sınıfta alana geçiş, ilerleyen süreçlerde dal seçimi iş ve işlemlerini yürütmek. Okula nakil gelen veya başka kurumlara nakil giden MESEM öğrencilerinin sistem üzerindeki onay ve yerleştirme süreçlerini tamamlamak",
+            "İşletme Değişikliği ve Koordinasyon: Çeşitli nedenlerle (uyumsuzluk, işletmenin kapanması vb.) işletme değiştirmek isteyen öğrencilerin yeni işletme bulma, yeni sözleşme imzalama ve e-MESEM üzerindeki işletme güncelleme işlemlerini koordine etmek. Tüm değişiklikler için koordinatör müdür yardımcısı ile koordineli çalışmak",
+            "Teorik ve Pratik Eğitimin Takibi: Öğrencilerin okuldaki teorik eğitimleri ile işletmelerdeki pratik eğitimlerinin (beceri eğitimi) uyumunu izlemek. Sınıf defterlerinin, yoklama dökümlerinin ve e-MESEM veri girişlerinin (not, devamsızlık vb.) eksiksiz ve zamanında yapılmasını sağlamak",
+            "Devamsızlık Takibi ve Veli Bilgilendirmesi: Hem okulda hem de işletmede yapılan devamsızlıkları günlük/haftalık olarak e-MESEM sistemine işlemek. Sınırları aşma eğiliminde olan veya devamsızlık yapan öğrencilerin velilerine ve işletmelerine resmi iletişim araçları (SMS, mektup, e-posta) ile zamanında yasal bildirimleri yapmak",
+            "Kalfalık, Ustalık ve Usta Öğreticilik Sınavları: Dönem sonlarında veya kalfalık/ustalık sınav dönemlerinde başvuru alma, denklik süreçlerini yürütme, sınav komisyonlarını oluşturma, sınav evraklarını hazırlama ve sınav sonuçlarının e-MESEM sistemine işlenerek belge basım süreçlerini yönetmek",
+            "Denklik İşlemleri: Dışarıdan başvuran veya geçmiş öğrenmelerin tanınması kapsamında başvuru yapan kişilerin eğitim durumlarını ve çalışma sürelerini gösteren belgeleri inceleyerek, mevzuata uygun olarak kalfalık veya ustalık sınavlarına denklik işlemlerini gerçekleştirmek",
+            "Devlet Katkısı ve İşletme Ödemeleri Takibi: İşletmelere ödenecek olan 3308 sayılı Kanun kapsamındaki devlet katkısı ödemelerine esas teşkil eden devamsızlık ve devam durumlarını netleştirerek, listeleri hazırlamak ve ödemeleri gerçekleştirmek. Çırak öğrencilerin dekontlarını arşivlemek incelemek, her ayın en geç 8'inde devlet katkısını onaylamak",
+            "Özel eğitim hizmetleri yönetmeliğinin gereklerini yapmak, sınıf şube öğretmenlerinin veli gruplarını etkin kullanımını takip etmek, öğrencilerin veli bilgilerini e-MESEM'e işlemek ve dijital ortamlardaki veri girişlerinin eksiksiz olmasını sağlamak"
+          ]
+        },
+
+        // 2. ÖĞRENCİ SGK VE SİGORTA İŞ VE İŞLEMLERİ
+        {
+          id: "task-ogrenci-sgk",
+          type: "package",
+          category: "MESEM / SGK",
+          title: "Öğrenci SGK ve Sigorta İş ve İşlemleri",
+          subTasks: [
+            "İşe Giriş Bildirgelerinin Düzenlenmesi: MESEM programına kesin kaydı yapılan veya işletmede beceri eğitimine başlayacak olan öğrencilerin, yasal süreler içinde Sosyal Güvenlik Kurumu (SGK) e-Bildirge sistemi üzerinden '4a Sigortalı İşe Giriş Bildirgesi' düzenlenerek sisteme girişlerini yapmak ve onaylı barkodlu çıktısını öğrenci dosyasında saklamak",
+            "İşten Çıkış Bildirgelerinin Düzenlenmesi: Mezuniyet, nakil, kayıt silme, sözleşme feshi veya işletme ayrılışı gibi nedenlerle programla ilişiği kesilen öğrencilerin, yasal süresi içinde SGK e-Bildirge sistemi üzerinden 'Sigortalı İşten Ayrılış Bildirgesi'ni düzenlemek",
+            "Aylık Prim ve Hizmet Belgelerinin Hazırlanması: Her ay, öğrencilerin okul ve işletme devamsızlık durumlarına göre fiilen prime esas gün sayılarını hesaplamak. Eksik gün nedenlerini (devamsızlık, rapor vb.) belirleyerek Aylık Prim ve Hizmet Bildirgelerini (tahakkuk fişlerini) yasal süresi içinde SGK sistemine onaylatmak",
+            "İş Kazası ve Meslek Hastalığı Süreçlerinin Takibi: Öğrencilerin işletmede veya okulda uğrayabileceği olası iş kazalarını yakından takip etmek. İş kazası meydana gelmesi durumunda, yasal süre olan 3 iş günü içinde SGK sistemine 'İş Kazası Bildirimi'ni işletmelerle iletişime geçerek yapmak ve idari para cezası risklerini sıfırlamak",
+            "Sağlık Raporlarının (İstirahat Raporları) Sisteme İşlenmesi: Öğrencilerin aldıkları istirahat/sağlık raporlarının okula ulaştırılmasını sağlamak; SGK 'Çalışamazlık Girişi' sistemine süresi içinde girerek eksik gün olarak yansıtılmasını sağlamak",
+            "Arşiv ve Dosyalama Düzeni: Her öğrenci için kayıt dosyası oluşturarak; işe giriş, işten çıkış, sözleşme örneği, ustalık/usta öğreticilik belgesi, vergi levhası, rapor ve iş kazası evraklarını dijital ve fiziki ortamda arşivlemek"
+          ]
+        },
+
+        // 3. PERSONEL İŞLERİ, MEBBİS, DERS DAĞITIMI VE İDARİ İŞLER
+        {
+          id: "task-personel-idari",
+          type: "package",
+          category: "Personel & İdari",
+          title: "Personel İş ve İşlemleri, MEBBİS, Ders Dağıtımı ve Ek Ders Tahakkukları",
+          subTasks: [
+            "Personel iş ve işlemlerini yürütmek, personellerin izin ve rapor iş ve işlemlerini takip etmek, rapor alan personeller ile ilgili tedbirleri almak",
+            "Okulun MEBBİS üzerindeki her türlü işlemini takip etmek ve kayıtları sağlıklı tutmak",
+            "Okulumuz yönetici ve öğretmenlerinin ders dağıtım programlarını ve nöbet görevlerini dengeli bir şekilde yapmak, gerekli tebligatları sağlamak, programların bir örneğini muhafaza etmek ve nöbetlerin esaslarına uygun yapılmasını sağlamak",
+            "Tüm personelin maaş, ücret, sosyal yardım gibi ödemelerini takip etmek, işlemlerin doğru ve zamanında yapılmasını sağlamak",
+            "Sene başı yapılan öğretmenler kurulunda oluşturulan kurul, komisyon ve ekiplerin görevlerinin gereklerini yapmalarını sağlamak",
+            "Ders ve ek ders ödemelerini yürütmek, sorumluluk sınavlarına katılan öğretmenlerin sınav ücreti puantajını ek derse yansıtmak",
+            "Okul Stratejik Plan hazırlama ekibine başkanlık etmek",
+            "Okul kontenjan belirleme komisyonuna başkanlık yapmak ve kontenjan girişini vaktinde gerçekleştirmek",
+            "Okulun Norm İşlemlerini yürütmek, norm fazlası öğretmenleri tespit etmek ve gerekli tebligat işlemlerini yapmak",
+            "ADABİS iş ve işlemlerini yürütmek, tüm modüllerin ilgililerce de sağlıklı işletilmesini sağlamak",
+            "Her türlü tebligat işlemleri ile idari ve adli işlemleri usulüne uygun yapmak ve takip etmek",
+            "Okul WEB sitesini güncel tutmak, duyuru ve haberleri zamanında yayınlamak ve WEB Yayın Ekibi ile organize çalışmak",
+            "Sorumluluk sınavlarını hazırlamak ve öğrencilerin sınav programlarını planlamak"
+          ]
+        },
+
+        // 4. E-OKUL, ÖĞRENCİ İŞLERİ, SINAVLAR VE ÖZEL EĞİTİM
+        {
+          id: "task-eokul-ogrenci-isleri",
+          type: "package",
+          category: "Öğrenci İşleri",
+          title: "e-Okul Yönetimi, Öğrenci İşleri, Devamsızlık Takibi, Sınavlar ve Sosyal Etkinlikler",
+          subTasks: [
+            "Öğrenci işlerini yürütmek; özürlü ya da özürsüz devamsızlık yapan öğrencilerin velilerine sınıf öğretmenlerince ulaşılmasını sağlamak, görüşme kayıtlarını tutmak ve yasal devamsızlık bildirimlerini zamanında velilere yapmak",
+            "Devamsızlığın Azaltılması kapsamında gerçekleştirilen etkinlikleri dosyalamak ve sunuma hazır bulundurmak",
+            "Sınıf defterlerinin ve yoklama fişlerinin sağlıklı doldurulmasını takip etmek, sınıf listeleri ve ders programının güncel halini sınıf defterinde bulundurmak, defterleri paraflamak, ders başlama/bitişinde eksiksiz dağıtılıp toplanmasını sağlamak",
+            "Nakil Komisyonuna başkanlık etmek, nakilleri takip edip onay gününde onaylamak ve nakil gelen öğrencileri sınıf listelerine dahil etmek",
+            "Şube Öğretmenler Kuruluna başkanlık etmek ve veli toplantılarını organize etmek",
+            "BEP Birimine başkanlık yapmak, özel gereksinimli öğrencilerin BEP planlarını, e-Okul ve RAM raporlarının güncel olmasını sağlamak ve Özel Eğitim Hizmetleri Yönetmeliği gereklerini yerine getirmek",
+            "Rehberlik Hizmetleri Yürütme Kurulu'na başkanlık yapmak, ADABİS Rehberlik Modülü aylık veri girişlerini gerçekleştirmek ve Bağımlılıkla Mücadele işlemlerini yürütmek",
+            "Sosyal Etkinlik Kurulu'na başkanlık etmek, faaliyet raporlarını dosyalamak, belirli gün ve haftaları organize etmek, gezi faaliyetlerini yürütmek ve faaliyet görsellerini arşivlemek",
+            "Teslim alınan aylık rehberlik ve kulüp evraklarıyla ilgili puantaj hazırlamak ve ek ders için ilgili müdür yardımcısına teslim etmek",
+            "İlköğretim ve Ortaöğretim Kurumları Bursluluk Sınavı (İOKBS) ile PİKTES burs, eğitim ve sınav süreçlerini yürütmek",
+            "Okulda gerçekleştirilecek her türlü toplantı, seminer, sergi, tatbikat, kurs ve etkinlikleri organize etmek ve konferans salonunun hazır olmasını sağlamak",
+            "Sorumluluk sınavlarının ve ülke geneli ortak sınavların uygulamasını sağlamak, sınav tarihlerini ve not girişlerini kontrol etmek",
+            "e-Okul üzerinde ders programı, öğretmen tanımlamaları, sınıf rehber öğretmeni/başkan bilgileri, alan/dal dersleri, seçmeli dersler ve alan-dal tercihlerini sisteme girmek",
+            "Öğrenci fotoğraflarını güncel tutmak, Öğrenci Durum Belgesi (Tasdikname) ve öğrenci belgesi düzenlemek",
+            "Dönem sonlarında not kilitleme işlemlerini gerçekleştirmek, not fişlerini hazırlamak, karne bilgilerini denetleyip karne basımını yapmak",
+            "Mezuniyet işlemlerini yürütmek, diploma ve iş yeri açma belgelerini hazırlamak, ÖSYM Okul Birincisi veri girişini vaktinde yapmak ve onaylamak",
+            "Sağlıkla İlgili Fiziksel Uygunluk Karnesi modülü veri girişlerini takip etmek, okul formasının belirlenmesi/uygulanması ve Okul Aile Birliği iş ve işlemlerini yürütmek"
+          ]
+        },
+
+        // 5. TAŞINIR MAL YÖNETİMİ (TKYS), MYS VE AMBAR DENETİMİ
+        {
+          id: "task-tasinir-mys-teknik",
+          type: "package",
+          category: "Taşınır & Mali",
+          title: "Taşınır Mal Yönetimi (TKYS), Ambar Denetimi, MYS Harcamaları ve Büro İşlemleri",
+          subTasks: [
+            "Taşınır Mal Yönetmeliği gereği verilen görevleri yapmak; edinilen taşınırlardan muayene ve kabulü yapılanları teslim almak, ambarlarda muhafaza etmek ve kesin kabulü yapılmayanların kullanıma verilmesini önlemek",
+            "Taşınırların giriş ve çıkışına ilişkin kayıtları tutmak, belge ve cetvelleri düzenlemek, taşınır mal yönetim hesap cetvellerini hazırlamak",
+            "Tüketime veya kullanıma verilmesi uygun görülen taşınırları teslim etmek, yangın, çalınma ve bozulmaya karşı gerekli koruma tedbirlerini almak",
+            "Ambar sayımını ve stok kontrolünü yapmak, asgari stok seviyesinin altına düşen taşınırları bildirmek, kullanımda bulunan dayanıklı taşınırların sayımlarını yapmak",
+            "Harcama biriminin malzeme ihtiyaç planlamasının yapılmasına yardımcı olmak ve ambarları devir-teslim etmeden görevden ayrılmamak",
+            "MYS 'Veri Giriş Görevlisi' rolüyle harcama talimatı üzerine mal/hizmet alımı, kabul, belgelendirme ve ödeme için gerekli belge hazırlama süreçlerini yürütmek",
+            "Ödenek talebi ve takibi işlerini yürütmek, huzur hakkı ödemeleri işlemlerini koordine etmek ve okul faturalarının zamanında ödenmesini sağlamak",
+            "EBYS ile kurum/kuruluşlarla gerekli yazışmaları yürütmek, okula gelen dilekçelerin kaydını yapmak, gelen-giden evrak defter ve dosyalarını tutmak",
+            "Teslim edilen gizli ya da şahıslara ait yazıların gizlilik içinde saklanmasını sağlamak, okul arşivinin düzenli olmasını sağlamak ve okulun resmi mail adresini takip etmek",
+            "Gelen icra yazılarını en kısa sürede cevaplandırmak ve postalamak; personelin göreve başlama, ayrılma, yolluk, aile durumu, rapor, terfi ve sendika değişikliklerini ilgili yöneticiyle koordineli yürütmek"
+          ]
+        },
+
+        // 6. TEKİL BAĞIMSIZ GÖREVLER
+        {
+          id: "task-kantin-denetim",
+          type: "single",
+          category: "İdari & Denetim",
+          title: "Kantin ile İlgili İş ve İşlemleri Gerçekleştirmek ve Hijyen Ekibini Denetlemek",
+          subTasks: []
+        },
+        {
+          id: "task-disiplin-kurulu",
+          type: "single",
+          category: "Öğrenci İşleri",
+          title: "Okulumuz Ödül ve Disiplin Kuruluna Başkanlık Etmek & Kararları e-Okul'a İşlemek",
+          subTasks: []
+        },
+        {
+          id: "task-proje-cedes",
+          type: "single",
+          category: "Projeler",
+          title: "ÇEDES Projesi ile İlgili İş ve İşlemleri Yapmak",
+          subTasks: []
+        },
+        {
+          id: "task-proje-dilimiz",
+          type: "single",
+          category: "Projeler",
+          title: "Dilimizin Zenginlikleri Projesini Yürütmek",
+          subTasks: []
+        }
+      ]
+    };
+
+    // Önbellek Yönetimi
+    let appData = null;
+    try {
+      const stored = localStorage.getItem('portal_delegation_v15_guide_ready');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed && Array.isArray(parsed.assistants) && parsed.assistants.length > 0 && Array.isArray(parsed.tasks)) {
+          appData = parsed;
+        }
+      }
+    } catch (e) {
+      console.warn("Storage okuma hatası:", e);
+    }
+
+    if (!appData || !appData.assistants || appData.assistants.length === 0) {
+      appData = JSON.parse(JSON.stringify(initialWordData));
+      localStorage.setItem('portal_delegation_v15_guide_ready', JSON.stringify(appData));
+    }
+
+    function saveData() {
+      localStorage.setItem('portal_delegation_v15_guide_ready', JSON.stringify(appData));
+      render();
+    }
+
+    function resetToFactoryDefaults() {
+      if (confirm("Tüm değişiklikler sıfırlanacak ve Word belgesindeki orijinal şablon yüklenecektir. Onaylıyor musunuz?")) {
+        appData = JSON.parse(JSON.stringify(initialWordData));
+        saveData();
+      }
+    }
+
+    // TÜM MÜDÜR YARDIMCISI GÖREVLERİNİ SIFIRLAMA
+    function clearAllAssignments() {
+      if (!confirm("Tüm müdür yardımcılarına atanmış görevler kaldırılacak ve havuza geri toplanacaktır. Onaylıyor musunuz?")) return;
+      appData.assistants.forEach(a => {
+        a.assignedTasks = [];
+      });
+      saveData();
+    }
+
+    // ALT GÖREVİ PAKETTEN AYIRIP TEKİL GÖREV YAPMA MOTORU
+    function splitSubTaskToSingle(parentTaskId, subTaskIndex) {
+      const parentTask = appData.tasks.find(t => t.id === parentTaskId);
+      if (!parentTask || !parentTask.subTasks || !parentTask.subTasks[subTaskIndex]) return;
+
+      const subTaskText = parentTask.subTasks[subTaskIndex];
+      if (!confirm(`"${subTaskText.substring(0, 45)}..." maddesini paketten ayırıp bağımsız bir tekil görev yapmak istiyor musunuz?`)) return;
+
+      let newTitle = subTaskText;
+      let newCategory = parentTask.category || "Genel";
+
+      parentTask.subTasks.splice(subTaskIndex, 1);
+
+      const newSingleTask = {
+        id: 'task-split-' + Date.now(),
+        type: 'single',
+        category: newCategory,
+        title: newTitle,
+        subTasks: []
+      };
+
+      appData.tasks.push(newSingleTask);
+      saveData();
+    }
+
+    // YEDEK DIŞA AKTAR (JSON İndir)
+    function exportDataBackup() {
+      try {
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appData, null, 2));
+        const dlAnchorElem = document.createElement('a');
+        dlAnchorElem.setAttribute("href", dataStr);
+        const fileName = `Gorev_Dagitim_Yedek_${new Date().toISOString().slice(0, 10)}.json`;
+        dlAnchorElem.setAttribute("download", fileName);
+        dlAnchorElem.click();
+      } catch (err) {
+        alert("Yedek indirilirken hata oluştu: " + err.message);
+      }
+    }
+
+    // YEDEK İÇE AKTAR (JSON Yükle)
+    function importDataBackup(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const imported = JSON.parse(e.target.result);
+          if (imported && Array.isArray(imported.assistants) && Array.isArray(imported.tasks)) {
+            appData = imported;
+            saveData();
+            alert("Yedek başarıyla yüklendi!");
+          } else {
+            alert("Geçersiz yedek dosyası formatı.");
+          }
+        } catch (err) {
+          alert("Dosya okunurken hata oluştu: " + err.message);
+        }
+      };
+      reader.readAsText(file);
+      event.target.value = '';
+    }
+
+    // Modal Yönetimi
+    function openModal(id) {
+      const el = document.getElementById(id);
+      if (el) {
+        el.classList.remove('hidden');
+        el.classList.add('flex');
+      }
+    }
+    function closeModal(id) {
+      const el = document.getElementById(id);
+      if (el) {
+        el.classList.add('hidden');
+        el.classList.remove('flex');
+      }
+    }
+
+    // Kurum Bilgileri
+    function openSchoolSettingsModal() {
+      document.getElementById('setting-school-name').value = appData.schoolName || '';
+      document.getElementById('setting-subdistrict').value = appData.subDistrict || '';
+      document.getElementById('setting-term').value = appData.term || '';
+      document.getElementById('setting-principal').value = appData.principalName || '';
+      openModal('school-settings-modal');
+    }
+
+    function saveSchoolSettings() {
+      const sName = document.getElementById('setting-school-name').value.trim();
+      const sDist = document.getElementById('setting-subdistrict').value.trim();
+      const sTerm = document.getElementById('setting-term').value.trim();
+      const sPrinc = document.getElementById('setting-principal').value.trim();
+
+      if (!sName) return alert("Lütfen okul/kurum adını giriniz.");
+
+      appData.schoolName = sName;
+      appData.subDistrict = sDist || 'İLÇE MİLLÎ EĞİTİM MÜDÜRLÜĞÜ';
+      appData.term = sTerm || '2026-2027 Eğitim-Öğretim Yılı';
+      appData.principalName = sPrinc || 'Okul Müdürü';
+
+      closeModal('school-settings-modal');
+      saveData();
+    }
+
+    function toggleSubTypeInput() {
+      const type = document.querySelector('input[name="task-type-radio"]:checked').value;
+      const subsGroup = document.getElementById('subtasks-input-group');
+      if (type === 'single') {
+        subsGroup.classList.add('hidden');
+      } else {
+        subsGroup.classList.remove('hidden');
+      }
+    }
+
+    // Müdür Yardımcısı Ekleme & Düzenleme
+    function openAssistantModal(astId = null) {
+      const titleEl = document.getElementById('assistant-modal-title');
+      const editIdInput = document.getElementById('edit-assistant-id');
+      const nameInput = document.getElementById('new-ast-name');
+      const roleInput = document.getElementById('new-ast-role');
+
+      if (astId) {
+        const ast = appData.assistants.find(a => a.id === astId);
+        if (!ast) return;
+        titleEl.textContent = "Müdür Yardımcısını Düzenle";
+        editIdInput.value = ast.id;
+        nameInput.value = ast.name;
+        roleInput.value = ast.role;
+      } else {
+        titleEl.textContent = "Müdür Yardımcısı Ekle";
+        editIdInput.value = "";
+        nameInput.value = "";
+        roleInput.value = "Müdür Yardımcısı";
+      }
+
+      openModal('assistant-modal');
+    }
+
+    function handleSaveAssistant() {
+      const editId = document.getElementById('edit-assistant-id').value;
+      const name = document.getElementById('new-ast-name').value.trim();
+      const role = document.getElementById('new-ast-role').value.trim() || 'Müdür Yardımcısı';
+
+      if (!name) return alert("Lütfen yönetici adı giriniz.");
+
+      if (editId) {
+        const astIndex = appData.assistants.findIndex(a => a.id === editId);
+        if (astIndex !== -1) {
+          appData.assistants[astIndex].name = name;
+          appData.assistants[astIndex].role = role;
+        }
+      } else {
+        appData.assistants.push({
+          id: 'ast-' + Date.now(),
+          name,
+          role,
+          assignedTasks: []
+        });
+      }
+
+      closeModal('assistant-modal');
+      saveData();
+    }
+
+    function deleteAssistant(astId) {
+      if (!confirm("Bu müdür yardımcısını silmek istediğinize emin misiniz?")) return;
+      appData.assistants = appData.assistants.filter(a => a.id !== astId);
+      saveData();
+    }
+
+    // Görev Ekleme / Düzenleme
+    function openTaskModal(taskId = null) {
+      const modalHeading = document.getElementById('modal-task-heading');
+      const editIdInput = document.getElementById('edit-task-id');
+      const titleInput = document.getElementById('task-title-input');
+      const catInput = document.getElementById('task-category-input');
+      const subsInput = document.getElementById('task-subs-input');
+
+      if (taskId) {
+        const task = appData.tasks.find(t => t.id === taskId);
+        if (!task) return;
+
+        modalHeading.textContent = "Görevi / Paketi Düzenle";
+        editIdInput.value = task.id;
+        titleInput.value = task.title;
+        catInput.value = task.category || 'Genel';
+        subsInput.value = (task.subTasks || []).join('\n');
+
+        if (task.type === 'single') {
+          document.querySelector('input[name="task-type-radio"][value="single"]').checked = true;
+        } else {
+          document.querySelector('input[name="task-type-radio"][value="package"]').checked = true;
+        }
+      } else {
+        modalHeading.textContent = "Yeni Görev / Paket Tanımla";
+        editIdInput.value = "";
+        titleInput.value = "";
+        catInput.value = "Genel İdari";
+        subsInput.value = "";
+        document.querySelector('input[name="task-type-radio"][value="package"]').checked = true;
+      }
+
+      toggleSubTypeInput();
+      openModal('task-modal');
+    }
+
+    function saveTaskModalHandler() {
+      const editId = document.getElementById('edit-task-id').value;
+      const title = document.getElementById('task-title-input').value.trim();
+      const category = document.getElementById('task-category-input').value.trim() || 'Genel';
+      const type = document.querySelector('input[name="task-type-radio"]:checked').value;
+      const subsRaw = document.getElementById('task-subs-input').value;
+
+      if (!title) return alert("Lütfen görev başlığı girin.");
+
+      const subTasks = (type === 'single') 
+        ? [] 
+        : subsRaw.split('\n').map(s => s.trim()).filter(Boolean);
+
+      if (editId) {
+        const taskIndex = appData.tasks.findIndex(t => t.id === editId);
+        if (taskIndex !== -1) {
+          appData.tasks[taskIndex].title = title;
+          appData.tasks[taskIndex].category = category;
+          appData.tasks[taskIndex].type = type;
+          appData.tasks[taskIndex].subTasks = subTasks;
+        }
+      } else {
+        const newTask = {
+          id: 'task-' + Date.now(),
+          type,
+          category,
+          title,
+          subTasks
+        };
+        appData.tasks.push(newTask);
+      }
+
+      closeModal('task-modal');
+      document.getElementById('task-title-input').value = '';
+      document.getElementById('task-subs-input').value = '';
+      document.getElementById('edit-task-id').value = '';
+
+      saveData();
+    }
+
+    function deleteTask(taskId) {
+      if (!confirm("Bu görevi sistemden tamamen silmek istediğinize emin misiniz?")) return;
+      appData.tasks = appData.tasks.filter(t => t.id !== taskId);
+      appData.assistants.forEach(a => {
+        a.assignedTasks = (a.assignedTasks || []).filter(id => id !== taskId);
+      });
+      saveData();
+    }
+
+    function unassignTask(astId, taskId) {
+      const ast = appData.assistants.find(a => a.id === astId);
+      if (ast) {
+        ast.assignedTasks = (ast.assignedTasks || []).filter(id => id !== taskId);
+        saveData();
+      }
+    }
+
+    // Görev Kartı HTML
+    function renderTaskCard(task, assignedAstList, isPool = false, curAstId = null) {
+      if (!task) return '';
+      const astList = Array.isArray(assignedAstList) ? assignedAstList : [];
+      const isSingle = task.type === 'single';
+      const isAssigned = astList.length > 0;
+
+      const subListHtml = (!isSingle && task.subTasks && task.subTasks.length > 0)
+        ? `<div class="mt-2 pt-2 border-t border-slate-100">
+            <ul class="space-y-1.5 pl-1 text-[11px] text-slate-600">
+              ${task.subTasks.map((st, idx) => `
+                <li class="leading-relaxed flex items-start justify-between gap-1.5 group/item">
+                  <span class="flex-1">• ${st}</span>
+                  <button onclick="splitSubTaskToSingle('${task.id}', ${idx})" title="Bu alt maddeyi paketten ayırıp bağımsız tekil görev yap" class="text-slate-300 hover:text-amber-600 opacity-0 group-hover/item:opacity-100 transition p-0.5 shrink-0">
+                    <i class="ph-bold ph-scissors text-xs"></i>
+                  </button>
+                </li>
+              `).join('')}
+            </ul>
+           </div>`
+        : '';
+
+      const typeBadge = isSingle
+        ? `<span class="text-[9px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded">Tekil Görev</span>`
+        : `<span class="text-[9px] font-bold uppercase tracking-wider text-sky-700 bg-sky-50 border border-sky-200 px-2 py-0.5 rounded">Paket (${task.subTasks ? task.subTasks.length : 0} Madde)</span>`;
+
+      let footerHtml = '';
+      if (isPool) {
+        if (isAssigned) {
+          footerHtml = `
+            <div class="mt-2.5 pt-2 border-t border-slate-100 flex flex-wrap items-center gap-1.5">
+              <span class="text-[10px] text-slate-500 font-semibold">Atananlar:</span>
+              ${astList.map(a => `
+                <span class="inline-flex items-center gap-1 text-[10px] font-bold text-sky-800 bg-sky-50 border border-sky-200 px-2 py-0.5 rounded">
+                  <i class="ph-bold ph-check text-sky-600 text-xs"></i> ${a.name}
+                </span>
+              `).join('')}
+            </div>
+          `;
+        } else {
+          footerHtml = `
+            <div class="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between">
+              <span class="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded">
+                <i class="ph-bold ph-hourglass-high text-xs"></i> Henüz Atanmadı
+              </span>
+              <span class="text-[10px] text-slate-400">Boşta</span>
+            </div>
+          `;
+        }
+      }
+
+      return `
+        <div class="task-card bg-white border ${isPool && isAssigned ? 'border-slate-200 bg-slate-50/70' : 'border-slate-200/90 shadow-sm'} p-3.5 rounded-xl cursor-grab active:cursor-grabbing hover:border-sky-400 hover:shadow-md transition-all group select-none relative" data-task-id="${task.id}" data-task-type="${task.type}" data-is-assigned="${isAssigned}">
+          <div class="flex items-start justify-between gap-2">
+            <div class="space-y-1 flex-1">
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <span class="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded">${task.category || 'Genel'}</span>
+                ${typeBadge}
+              </div>
+              <h4 class="text-xs font-bold text-slate-900 leading-snug pt-0.5">${task.title}</h4>
+            </div>
+
+            <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition shrink-0 bg-white shadow-sm rounded-lg p-0.5 border border-slate-200">
+              <button onclick="openTaskModal('${task.id}')" title="Görevi Düzenle" class="text-slate-500 hover:text-sky-600 p-1 rounded hover:bg-slate-100">
+                <i class="ph-bold ph-pencil-simple text-sm"></i>
+              </button>
+              ${curAstId ? `
+                <button onclick="unassignTask('${curAstId}', '${task.id}')" title="Bu yöneticiden kaldır" class="text-slate-400 hover:text-amber-600 p-1 rounded hover:bg-slate-100">
+                  <i class="ph-bold ph-x-circle text-sm"></i>
+                </button>
+              ` : `
+                <button onclick="deleteTask('${task.id}')" title="Görevi Tamamen Sil" class="text-slate-400 hover:text-rose-600 p-1 rounded hover:bg-slate-100">
+                  <i class="ph-bold ph-trash text-sm"></i>
+                </button>
+              `}
+            </div>
+          </div>
+
+          ${subListHtml}
+          ${footerHtml}
+        </div>
+      `;
+    }
+
+    // Arayüzü Çizme (Render)
+    function render() {
+      const headerSchool = document.getElementById('header-school-name');
+      const headerTerm = document.getElementById('header-term');
+      if (headerSchool) headerSchool.textContent = appData.schoolName || 'Kurum Görev Dağıtım Portalı';
+      if (headerTerm) headerTerm.textContent = appData.term || '2026-2027';
+
+      // Görev haritasını hazırla
+      const taskMap = {};
+      appData.tasks.forEach(t => { taskMap[t.id] = []; });
+      appData.assistants.forEach(a => {
+        (a.assignedTasks || []).forEach(tid => {
+          if (taskMap[tid]) {
+            taskMap[tid].push(a);
+          }
+        });
+      });
+
+      // Sol Havuzu Doldur
+      const poolList = document.getElementById('pool-list');
+      if (poolList) {
+        poolList.innerHTML = appData.tasks.map(t => renderTaskCard(t, taskMap[t.id], true)).join('');
+      }
+
+      const unassignedCount = appData.tasks.filter(t => (taskMap[t.id] || []).length === 0).length;
+      document.getElementById('pool-count').textContent = `${unassignedCount} Boşta`;
+      document.getElementById('total-count').textContent = `${appData.tasks.length} Toplam`;
+
+      // Sağdaki Müdür Yardımcısı Kolonlarını Doldur
+      const astContainer = document.getElementById('assistants-container');
+      if (astContainer) {
+        if (!appData.assistants || appData.assistants.length === 0) {
+          astContainer.innerHTML = `
+            <div class="h-64 border-2 border-dashed border-slate-300 rounded-2xl flex flex-col items-center justify-center p-8 text-center text-slate-400 w-full max-w-lg">
+              <i class="ph-bold ph-user-plus text-3xl mb-2 text-slate-300"></i>
+              <p class="text-sm font-semibold text-slate-600">Henüz Müdür Yardımcısı Eklenmemiş</p>
+              <p class="text-xs mt-1">Üst bardaki "Müdür Yrd. Ekle" butonuna basarak yeni bir yönetici tanımlayabilirsiniz.</p>
+            </div>
+          `;
+        } else {
+          astContainer.innerHTML = appData.assistants.map(ast => {
+            const assignedList = (ast.assignedTasks || [])
+              .map(tid => appData.tasks.find(t => t.id === tid))
+              .filter(Boolean);
+
+            const safeInitial = (ast.name || 'MY').replace(/[^0-9a-zA-Z]/g, '').substring(0, 3).toUpperCase() || 'MY';
+
+            return `
+              <div class="w-[380px] min-w-[360px] bg-white rounded-2xl border border-slate-200 flex flex-col shrink-0 h-full overflow-hidden shadow-sm">
+                <div class="p-4 border-b border-slate-100 bg-slate-50/70 flex items-center justify-between">
+                  <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-slate-900 text-white font-bold flex items-center justify-center text-xs shadow-sm">
+                      ${safeInitial}
+                    </div>
+                    <div>
+                      <h3 class="font-bold text-slate-900 text-sm leading-tight">${ast.name}</h3>
+                      <div class="flex items-center gap-1.5 mt-0.5">
+                        <span class="text-[11px] text-slate-500 font-medium">${ast.role}</span>
+                        <span class="bg-sky-100 text-sky-800 text-[10px] font-bold px-2 py-0.2 rounded-full">${assignedList.length} Görev</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="flex items-center gap-1">
+                    <button onclick="openAssistantModal('${ast.id}')" title="Yöneticiyi Düzenle" class="text-slate-500 hover:text-sky-600 p-1.5 rounded-lg hover:bg-slate-100 transition">
+                      <i class="ph-bold ph-pencil-simple text-base"></i>
+                    </button>
+                    <button onclick="generateLetter('${ast.id}')" title="Resmi Tebliğ Belgesi Yazdır" class="text-sky-600 hover:text-white hover:bg-sky-600 bg-sky-50 border border-sky-200 p-1.5 rounded-lg transition shadow-sm">
+                      <i class="ph-bold ph-printer text-base"></i>
+                    </button>
+                    <button onclick="deleteAssistant('${ast.id}')" title="Yöneticiyi Sil" class="text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-slate-100 transition">
+                      <i class="ph-bold ph-trash text-base"></i>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Bırakma Sahnesi -->
+                <div id="column-${ast.id}" data-column-id="${ast.id}" class="task-dropzone p-3.5 overflow-y-auto flex-1 space-y-3 custom-scroll bg-slate-50/40">
+                  ${assignedList.map(task => renderTaskCard(task, [], false, ast.id)).join('')}
+                  ${assignedList.length === 0 ? '<div class="h-36 border-2 border-dashed border-slate-200 rounded-xl flex flex-col items-center justify-center text-xs text-slate-400 gap-1.5"><i class="ph-bold ph-hand-grabbing text-xl text-slate-300"></i> Görev kartı sürükleyip bırakın</div>' : ''}
+                </div>
+              </div>
+            `;
+          }).join('');
+        }
+      }
+
+      initSortable();
+    }
+
+    // SortableJS Entegrasyonu
+    let activeSortables = [];
+    function initSortable() {
+      activeSortables.forEach(s => {
+        try { s.destroy(); } catch (e) {}
+      });
+      activeSortables = [];
+
+      const poolZone = document.getElementById('pool-list');
+      if (poolZone) {
+        const poolSortable = new Sortable(poolZone, {
+          group: {
+            name: 'tasks',
+            pull: 'clone',
+            put: false
+          },
+          animation: 200,
+          sort: false,
+          ghostClass: 'ghost-card',
+          chosenClass: 'chosen-card'
+        });
+        activeSortables.push(poolSortable);
+      }
+
+      const astZones = document.querySelectorAll('#assistants-container .task-dropzone');
+      astZones.forEach(zone => {
+        const sInstance = new Sortable(zone, {
+          group: 'tasks',
+          animation: 200,
+          ghostClass: 'ghost-card',
+          chosenClass: 'chosen-card',
+          onAdd: function (evt) {
+            const taskId = evt.item.getAttribute('data-task-id');
+            const targetColId = evt.to.getAttribute('data-column-id');
+
+            const targetAst = appData.assistants.find(a => a.id === targetColId);
+            if (targetAst) {
+              if (!targetAst.assignedTasks) targetAst.assignedTasks = [];
+              if (!targetAst.assignedTasks.includes(taskId)) {
+                targetAst.assignedTasks.push(taskId);
+              }
+            }
+            saveData();
+          },
+          onEnd: function (evt) {
+            if (evt.from !== evt.to && evt.to.getAttribute('data-column-id') !== 'pool') {
+              const taskId = evt.item.getAttribute('data-task-id');
+              const fromColId = evt.from.getAttribute('data-column-id');
+              const toColId = evt.to.getAttribute('data-column-id');
+
+              const fromAst = appData.assistants.find(a => a.id === fromColId);
+              const toAst = appData.assistants.find(a => a.id === toColId);
+
+              if (fromAst) fromAst.assignedTasks = (fromAst.assignedTasks || []).filter(id => id !== taskId);
+              if (toAst) {
+                if (!toAst.assignedTasks) toAst.assignedTasks = [];
+                if (!toAst.assignedTasks.includes(taskId)) toAst.assignedTasks.push(taskId);
+              }
+
+              saveData();
+            }
+          }
+        });
+        activeSortables.push(sInstance);
+      });
+    }
+
+    // Arama ve Filtreleme
+    function filterTasks() {
+      const q = document.getElementById('task-search').value.toLowerCase();
+      const typeFilter = document.getElementById('type-filter').value;
+
+      document.querySelectorAll('#pool-list .task-card').forEach(card => {
+        const text = card.innerText.toLowerCase();
+        const taskType = card.getAttribute('data-task-type');
+        const isAssigned = card.getAttribute('data-is-assigned') === 'true';
+
+        let matchesType = true;
+        if (typeFilter === 'single') matchesType = (taskType === 'single');
+        else if (typeFilter === 'package') matchesType = (taskType === 'package');
+        else if (typeFilter === 'unassigned') matchesType = !isAssigned;
+
+        const matchesSearch = text.includes(q);
+        card.style.display = (matchesType && matchesSearch) ? 'block' : 'none';
+      });
+    }
+
+    // Resmi Tebliğ Belgesi Motoru
+    let currentGeneratedText = "";
+    function generateLetter(astId) {
+      const ast = appData.assistants.find(a => a.id === astId);
+      if (!ast) return;
+
+      const assigned = (ast.assignedTasks || [])
+        .map(taskId => appData.tasks.find(t => t.id === taskId))
+        .filter(Boolean);
+
+      let taskListHtml = "";
+      let taskListPlain = "";
+
+      if (assigned.length === 0) {
+        taskListHtml = "<p class='text-rose-600 italic py-4 text-center'>Uhdenize atanmış aktif görev bulunmamaktadır.</p>";
+      } else {
+        taskListHtml = "<div class='space-y-3.5 my-6 text-xs text-justify leading-relaxed'>";
+        assigned.forEach((t, index) => {
+          const itemChar = String.fromCharCode(97 + (index % 26)) + (index >= 26 ? Math.floor(index/26) : '');
+          taskListHtml += `
+            <div class="border-b border-slate-200 pb-2.5">
+              <p class="font-bold text-slate-900 text-xs"><strong>${itemChar}) ${t.title}</strong></p>`;
+          taskListPlain += `${itemChar}) ${t.title}\n`;
+
+          if (t.subTasks && t.subTasks.length > 0) {
+            taskListHtml += "<ul class='list-disc pl-6 mt-1.5 text-[11px] space-y-1 text-slate-700'>";
+            t.subTasks.forEach(st => {
+              taskListHtml += `<li>${st}</li>`;
+              taskListPlain += `   • ${st}\n`;
+            });
+            taskListHtml += "</ul>";
+          }
+          taskListHtml += "</div>";
+        });
+        taskListHtml += "</div>";
+      }
+
+      const letterContentHtml = `
+        <div class="text-center font-bold space-y-0.5 mb-6 text-slate-900">
+          <p class="text-xs tracking-wider">T.C.</p>
+          <p class="text-xs uppercase">${appData.subDistrict || 'İLÇE MİLLÎ EĞİTİM MÜDÜRLÜĞÜ'}</p>
+          <p class="text-sm font-black tracking-wide uppercase">${appData.schoolName || 'OKUL MÜDÜRLÜĞÜ'}</p>
+        </div>
+
+        <div class="flex justify-between text-xs mb-6 border-b border-slate-300 pb-3 font-sans">
+          <div class="space-y-1">
+            <p><strong>Sayı :</strong> E-56285192-662-164443${Math.floor(100 + Math.random() * 900)}</p>
+            <p><strong>Konu :</strong> Görev Dağılımı ve Sorumluluklarınız</p>
+          </div>
+          <div class="text-right">
+            <p><strong>Tarih :</strong> ${new Date().toLocaleDateString('tr-TR')}</p>
+          </div>
+        </div>
+
+        <div class="text-center font-bold my-5 uppercase tracking-wider text-sm text-slate-900">
+          SAYIN ${ast.name}<br>
+          <span class="text-xs font-normal lowercase text-slate-600">(${ast.role})</span>
+        </div>
+
+        <p class="indent-8 text-xs leading-relaxed text-slate-800">
+          <strong>Sayın yöneticim;</strong> Çalışmalarınızı günlük, haftalık, aylık, dönemlik ve yıllık planlayarak yapınız. Planlarınızda çalışmaktan ziyade organizasyon ve takip üzerinde yoğunlaşınız. Yönetmelikleri ve yeni uygulamaları sürekli takip edip uygulayıcısı olunuz. Özellikle Millî Eğitim Bakanlığı Ortaöğretim Kurumları Yönetmeliği, Özel Eğitim Hizmetleri Yönetmeliği, Rehberlik Hizmetleri Yönetmeliği ve Sosyal Etkinlikler Yönetmeliklerine hakim olunuz. İletişime önem veriniz, size müdürünüzce verilen işleri öncelikle bitiriniz, sonucundan okul müdürüne ve ilgilisine bilgi veriniz. Okulumuzdaki eğitim, öğretim, yönetim ve teknik faaliyetlerin mevzuata uygun yürütülmesi amacıyla uhdenize verilen görevler aşağıda maddeler halinde sıralanmıştır:
+        </p>
+
+        ${taskListHtml}
+
+        <p class="indent-8 text-xs leading-relaxed text-slate-800 mt-4">
+          Kendisine havale edilen yazı ve belgelerin zamanında gereğini yapmak ve okul müdürünün mevzuat çerçevesinde vereceği diğer görevleri yerine getirmekle yükümlüsünüz. Görevlerinizin gereklerini rica eder, çalışmalarınızda başarılar dilerim.
+        </p>
+
+        <div class="mt-12 flex justify-between items-end text-xs pt-4 font-sans border-t border-slate-200">
+          <div class="text-left text-[11px] text-slate-600">
+            <p><strong>Tebliğ Eden :</strong> ${appData.principalName || 'Okul Müdürü'}</p>
+            <p class="mt-1">İmza : .....................................</p>
+          </div>
+          <div class="text-center font-bold">
+            <p>${appData.principalName || 'Okul Müdürü'}</p>
+            <p class="text-[11px] font-normal text-slate-600">Okul Müdürü</p>
+          </div>
+          <div class="text-right text-[11px] text-slate-600">
+            <p><strong>Tebellüğ Eden :</strong> ${ast.name}</p>
+            <p class="mt-1">Tarih / İmza : ...... / ...... / 2026</p>
+          </div>
+        </div>
+      `;
+
+      currentGeneratedText = `T.C.\n${appData.subDistrict}\n${appData.schoolName}\n\nKonu: Görevleriniz\nTarih: ${new Date().toLocaleDateString('tr-TR')}\n\nSAYIN ${ast.name} (${ast.role})\n\n${appData.term} süresince uhdenize tevdi edilen görevler aşağıdadır:\n\n${taskListPlain}\nGörevlerinizin gereklerini rica eder, çalışmalarınızda başarılar dilerim.\n\n${appData.principalName}\nOkul Müdürü`;
+
+      document.getElementById('letter-content').innerHTML = letterContentHtml;
+      openModal('letter-modal');
+    }
+
+    function copyLetterText() {
+      navigator.clipboard.writeText(currentGeneratedText).then(() => {
+        alert("Resmi tebliğ metni panoya kopyalandı!");
+      });
+    }
+
+    // Başlat
+    window.addEventListener('DOMContentLoaded', () => {
+      render();
+    });
+  </script>
+</body>
+</html>
